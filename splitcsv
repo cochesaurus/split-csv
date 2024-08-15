@@ -1,0 +1,45 @@
+#!/bin/bash
+# splitcsv -- given a file path and the number of lines per file, this utility takes a
+# CSV file in the same directory and it splits the file on chunks with
+# the given number of lines
+
+function getNumberOfChunkFiles
+{
+	numberOfLines=$(wc -l < $1)
+	### We add divisor minus one to the dividend to "rounding up" the result
+	numberofLinesPerChunk=$(((numberOfLines + ($2 - 1))/$2))
+}
+
+####
+#### Main block
+####
+
+if [ $# -ne 2 ] ; then
+  echo "Usage: $(basename $0) file_name.csv number_of_chunks"
+  echo "       with number_of_chunks is a numerical value greater than 1"
+  exit 1
+fi
+
+csvfile=$1; numberofchunks=$2
+
+if [ $numberofchunks -lt 2 ] ; then
+  echo "Invalid: The number of chunks #numberofchunks should be greater than 1." >&2 ; exit 1
+fi
+
+### Call function to calculate the number of lines per chunk file
+getNumberOfChunkFiles $csvfile $numberofchunks
+
+### Create temp header
+head -n 1 $csvfile > csvheader.csv
+
+### Read the original file from the second line (excluding the header) and split the file
+tail -n +2 $csvfile | split -l $numberofLinesPerChunk --additional-suffix=.csv -d -a 3 - splitfile_
+
+### Append the temp header to the chunk files
+for file in splitfile_*; do
+  cat csvheader.csv "$file" > temp && mv temp "$file"
+done
+
+### End processing
+echo "CSV file has been split successfully in $numberofchunks files with $numberofLinesPerChunk lines per file"
+exit 0
